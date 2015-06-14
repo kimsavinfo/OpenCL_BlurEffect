@@ -4,6 +4,12 @@
 //  Create a Julia fractal then Blur the result
 //  Created by Kim SAVAROCHE on 14/06/2015.
 //
+//  On Xcode :
+//  New projet > Other, Empty
+//  Add target > OS X console Application
+//  Build Phase > Link Binary With Libraries
+//                  OpenCL.framework
+//
 //  In prt, 1rst pixel =
 //  ptr[0] : Red
 //  ptr[1] : Green
