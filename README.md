@@ -22,6 +22,6 @@ It will illustrate the following scheme from the file "pdf/intro_to_opencl.pdf"
 This pdf is not from me obviously, I recommend it.
 
 ### On Xcode :
-New project > Other, Empty
-Add target > OS X console Application
-Build Phase > Link Binary With Libraries > OpenCL.framework
+1. New project > Other, Empty
+2. Add target > OS X console Application
+3. Build Phase > Link Binary With Libraries > OpenCL.framework
