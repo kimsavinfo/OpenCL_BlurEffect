@@ -4,7 +4,11 @@
 //  Create a Julia fractal then Blur the result
 //  Created by Kim SAVAROCHE on 14/06/2015.
 //
-//
+//  In prt, 1rst pixel =
+//  ptr[0] : Red
+//  ptr[1] : Green
+//  ptr[2] : Blue
+//  ptr[3] : Alpha
 
 #include <iostream>
 #include <stdio.h>
@@ -83,7 +87,6 @@ int julia(int x, int y) {
 
 /* ================== JULIA : FIN ================== */
 
-// Init bitmap en blanc
 void set_julia_bitmap(unsigned char *ptr)
 {
     int nbWorkGroup = (GLOBAL_DIM * GLOBAL_DIM) / (WORKGROUP_DIM * WORKGROUP_DIM);
@@ -116,17 +119,8 @@ void set_julia_bitmap(unsigned char *ptr)
     }
 }
 
-
-int main(int argc, const char * argv[])
+const char* importKernel()
 {
-    
-    // ====================== Init ======================
-    CPUBitmap bitmap(GLOBAL_DIM, GLOBAL_DIM);
-    unsigned char *ptr = bitmap.get_ptr();
-    set_julia_bitmap(ptr);
-    
-    
-    // ====================== Importer le kernel ======================
     FILE *fp;
     char *source_str;
     size_t source_size;
@@ -141,9 +135,11 @@ int main(int argc, const char * argv[])
     source_str = (char*)malloc(MAX_SOURCE_SIZE);
     source_size = fread(source_str, 1, MAX_SOURCE_SIZE, fp);
     fclose(fp);
-    const char *custom_kernel = source_str;
-    
-    // ====================== Appeler le kernel ======================
+    return source_str;
+}
+
+void launchKernel(const char *custom_kernel, unsigned char *ptr)
+{
     cl_int clStatus; //Keeps track of the error values returned.
     
     // Get platform and device information
@@ -172,7 +168,7 @@ int main(int argc, const char * argv[])
     // Create memory buffers on the device for each vector
     cl_mem ptr_clmem = clCreateBuffer(context, CL_MEM_READ_WRITE , sizeof(unsigned char) * GLOBAL_DIM * GLOBAL_DIM * 4, NULL, &clStatus);
     
-    // Copy the Buffer A and B to the device. We do a blocking write to the device buffer.
+    // Copy the Buffer for ptr to the device. We do a blocking write to the device buffer.
     clStatus = clEnqueueWriteBuffer(command_queue, ptr_clmem, CL_TRUE, 0, sizeof(unsigned char) * GLOBAL_DIM * GLOBAL_DIM * 4, ptr, 0, NULL, NULL);
     LOG_OCL_ERROR(clStatus, "clEnqueueWriteBuffer Failed...");
     
@@ -193,11 +189,10 @@ int main(int argc, const char * argv[])
     clStatus |= clSetKernelArg(kernel, 0, sizeof(cl_mem), (void *)&ptr_clmem);
     LOG_OCL_ERROR(clStatus, "clSetKernelArg Failed...");
     
-    // ******************** Execute the OpenCL kernel on the list
-    // Set number of work-items in 1 work-group
-    // Calcul du nombre de work group à créer : global_size / local_size
+    // Execute the OpenCL kernel on the list
+    // The number of work groups will be automatically calculated = global_size / local_size
     size_t global_size = GLOBAL_DIM * GLOBAL_DIM;
-    size_t local_size = WORKGROUP_DIM * WORKGROUP_DIM;
+    size_t local_size = WORKGROUP_DIM * WORKGROUP_DIM; // the number of work-items in 1 work-group
     cl_event saxpy_event;
     clStatus = clEnqueueNDRangeKernel(command_queue, kernel, 1, NULL, &global_size, &local_size, 0, NULL, &saxpy_event);
     LOG_OCL_ERROR(clStatus, "clEnqueueNDRangeKernel Failed...");
@@ -218,9 +213,24 @@ int main(int argc, const char * argv[])
     
     free(platforms);
     free(device_list);
-    // ====================== Afficher l'image ======================
+}
+
+
+
+int main(int argc, const char * argv[])
+{
+    // Create a bitmap
+    CPUBitmap bitmap(GLOBAL_DIM, GLOBAL_DIM);
+    unsigned char *ptr = bitmap.get_ptr();
+    set_julia_bitmap(ptr);
     
+    // Import and launch kernels
+    const char *custom_kernel = importKernel();
+    launchKernel(custom_kernel, ptr);
+    
+    // Show the result
     bitmap.display_and_exit();
     
     return 0;
 }
+
