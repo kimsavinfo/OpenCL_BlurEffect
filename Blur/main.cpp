@@ -1,7 +1,7 @@
 //
 //  main.cpp
-//  Blur
-//
+//  OpenCL : kernel and parallel programming
+//  Create a Julia fractal then Blur the result
 //  Created by Kim SAVAROCHE on 14/06/2015.
 //
 //
@@ -17,8 +17,12 @@
 // Common defines
 #define MAX_SOURCE_SIZE (0x100000)
 #define DEVICE_TYPE CL_DEVICE_TYPE_GPU
-#define DIM 800 // longueur et largeur du canevas = DIM * DIM pixels
-#define WORKGROUP_DIM 10 // nombre d'items dans un workgroup = NB_WORK_ITEM_LINE * NB_WORK_ITEM_LINE
+
+// We'll use he following square dimension :
+#define GLOBAL_DIM 800 // How many pixels are there on one image's side ?
+// Total pixels = GLOBAL_DIM * GLOBAL_DIM
+#define WORKGROUP_DIM 10 // How many pixels are there on one workgroup's side ?
+// Total items in one workgroup = NB_WORK_ITEM_LINE * NB_WORK_ITEM_LINE
 
 
 /* ================== JULIA : DEBUT ================== */
@@ -61,8 +65,8 @@ float magnitude2(cuComplex z)
 
 int julia(int x, int y) {
     const float scale = 1.5;
-    float jx = scale * (float)(DIM / 2 - x) / (DIM / 2);
-    float jy = scale * (float)(DIM / 2 - y) / (DIM / 2);
+    float jx = scale * (float)(GLOBAL_DIM / 2 - x) / (GLOBAL_DIM / 2);
+    float jy = scale * (float)(GLOBAL_DIM / 2 - y) / (GLOBAL_DIM / 2);
     
     cuComplex c = createComplex(-0.8, 0.156);
     cuComplex a = createComplex(jx, jy);
@@ -82,8 +86,8 @@ int julia(int x, int y) {
 // Init bitmap en blanc
 void set_julia_bitmap(unsigned char *ptr)
 {
-    int nbWorkGroup = (DIM * DIM) / (WORKGROUP_DIM * WORKGROUP_DIM);
-    int nbWorkGroupParLigne = DIM / WORKGROUP_DIM;
+    int nbWorkGroup = (GLOBAL_DIM * GLOBAL_DIM) / (WORKGROUP_DIM * WORKGROUP_DIM);
+    int nbWorkGroupParLigne = GLOBAL_DIM / WORKGROUP_DIM;
     int nbItemsParWorkGroup = WORKGROUP_DIM * WORKGROUP_DIM;
     
     for (int iWorkGroup = 0; iWorkGroup < nbWorkGroup - 1; iWorkGroup++)
@@ -96,14 +100,14 @@ void set_julia_bitmap(unsigned char *ptr)
             int iLigneLocale = iLocalId / WORKGROUP_DIM;
             int iColonneLocale = iLocalId - iLigneLocale * WORKGROUP_DIM;
             
-            int ligne = iLigneWG * (DIM * WORKGROUP_DIM) + iLigneLocale * DIM;
+            int ligne = iLigneWG * (GLOBAL_DIM * WORKGROUP_DIM) + iLigneLocale * GLOBAL_DIM;
             int colonne = iColonneWG * WORKGROUP_DIM + iColonneLocale;
             
             int iPtr = ligne + colonne;
             int offset = iPtr * 4;
             
-            int juliaLine = iPtr / DIM;
-            int juliaColumn = iPtr - juliaLine * DIM;
+            int juliaLine = iPtr / GLOBAL_DIM;
+            int juliaColumn = iPtr - juliaLine * GLOBAL_DIM;
             ptr[offset] = julia(juliaColumn, juliaLine) ? 255 : 0;
             ptr[offset + 1] = 0;
             ptr[offset + 2] = 0;
@@ -117,7 +121,7 @@ int main(int argc, const char * argv[])
 {
     
     // ====================== Init ======================
-    CPUBitmap bitmap(DIM, DIM);
+    CPUBitmap bitmap(GLOBAL_DIM, GLOBAL_DIM);
     unsigned char *ptr = bitmap.get_ptr();
     set_julia_bitmap(ptr);
     
@@ -166,10 +170,10 @@ int main(int argc, const char * argv[])
     LOG_OCL_ERROR(clStatus, "clCreateCommandQueue Failed...");
     
     // Create memory buffers on the device for each vector
-    cl_mem ptr_clmem = clCreateBuffer(context, CL_MEM_READ_WRITE , sizeof(unsigned char) * DIM * DIM * 4, NULL, &clStatus);
+    cl_mem ptr_clmem = clCreateBuffer(context, CL_MEM_READ_WRITE , sizeof(unsigned char) * GLOBAL_DIM * GLOBAL_DIM * 4, NULL, &clStatus);
     
     // Copy the Buffer A and B to the device. We do a blocking write to the device buffer.
-    clStatus = clEnqueueWriteBuffer(command_queue, ptr_clmem, CL_TRUE, 0, sizeof(unsigned char) * DIM * DIM * 4, ptr, 0, NULL, NULL);
+    clStatus = clEnqueueWriteBuffer(command_queue, ptr_clmem, CL_TRUE, 0, sizeof(unsigned char) * GLOBAL_DIM * GLOBAL_DIM * 4, ptr, 0, NULL, NULL);
     LOG_OCL_ERROR(clStatus, "clEnqueueWriteBuffer Failed...");
     
     // Create a program from the kernel source
@@ -192,14 +196,14 @@ int main(int argc, const char * argv[])
     // ******************** Execute the OpenCL kernel on the list
     // Set number of work-items in 1 work-group
     // Calcul du nombre de work group à créer : global_size / local_size
-    size_t global_size = DIM * DIM;
+    size_t global_size = GLOBAL_DIM * GLOBAL_DIM;
     size_t local_size = WORKGROUP_DIM * WORKGROUP_DIM;
     cl_event saxpy_event;
     clStatus = clEnqueueNDRangeKernel(command_queue, kernel, 1, NULL, &global_size, &local_size, 0, NULL, &saxpy_event);
     LOG_OCL_ERROR(clStatus, "clEnqueueNDRangeKernel Failed...");
     
     clStatus = clEnqueueReadBuffer(command_queue, ptr_clmem, CL_TRUE, 0,
-                                   sizeof(unsigned char) * DIM * DIM * 4, ptr, 1, &saxpy_event, NULL);
+                                   sizeof(unsigned char) * GLOBAL_DIM * GLOBAL_DIM * 4, ptr, 1, &saxpy_event, NULL);
     LOG_OCL_ERROR(clStatus, "clEnqueueReadBuffer Failed...");
     
     // Clean up and wait for all the comands to complete.

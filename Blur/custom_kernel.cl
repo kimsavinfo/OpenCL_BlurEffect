@@ -1,5 +1,5 @@
-#define DIM 800 // longueur et largeur du canevas = DIM * DIM pixels
-#define WORKGROUP_DIM 10 // nombre d'items dans un workgroup = NB_WORK_ITEM_LINE * NB_WORK_ITEM_LINE
+#define GLOBAL_DIM 800
+#define WORKGROUP_DIM 10
 
 __kernel
 void custom_kernel(  __global unsigned char *ptr )
@@ -13,8 +13,8 @@ void custom_kernel(  __global unsigned char *ptr )
     barrier(CLK_LOCAL_MEM_FENCE);
     
     
-    int nbWorkGroup = (DIM * DIM) / (WORKGROUP_DIM * WORKGROUP_DIM);
-    int nbWorkGroupParLigne = DIM / WORKGROUP_DIM;
+    int nbWorkGroup = (GLOBAL_DIM * GLOBAL_DIM) / (WORKGROUP_DIM * WORKGROUP_DIM);
+    int nbWorkGroupParLigne = GLOBAL_DIM / WORKGROUP_DIM;
     int nbItemsParWorkGroup = WORKGROUP_DIM * WORKGROUP_DIM;
     int iWorkGroup = get_group_id(0);
     int iLocalId = get_local_id(0);
@@ -25,7 +25,7 @@ void custom_kernel(  __global unsigned char *ptr )
     int iLigneLocale = iLocalId / WORKGROUP_DIM;
     int iColonneLocale = iLocalId - iLigneLocale * WORKGROUP_DIM;
     
-    int ligne = iLigneWG * (DIM * WORKGROUP_DIM) + iLigneLocale * DIM;
+    int ligne = iLigneWG * (GLOBAL_DIM * WORKGROUP_DIM) + iLigneLocale * GLOBAL_DIM;
     int colonne = iColonneWG * WORKGROUP_DIM + iColonneLocale;
     
     int iPtr = ligne + colonne;
