@@ -16,7 +16,9 @@
 
 ### memento.cl
 It will illustrate the following scheme from the file "pdf/intro_to_opencl.pdf"
+
 ![ScreenShot](/imgs/memento.PNG)
+
 This pdf is not from me obviously, I recommend it.
 
 ### On Xcode :
