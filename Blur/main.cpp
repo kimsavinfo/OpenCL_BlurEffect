@@ -30,6 +30,7 @@
 
 
 /* ================== JULIA : DEBUT ================== */
+/*
 typedef struct cuComplex {
     float r;
     float i;
@@ -84,9 +85,9 @@ int julia(int x, int y) {
     
     return 1;
 }
-
+*/
 /* ================== JULIA : FIN ================== */
-
+/*
 void set_julia_bitmap(unsigned char *ptr)
 {
     int nbWorkGroup = (GLOBAL_DIM * GLOBAL_DIM) / (WORKGROUP_DIM * WORKGROUP_DIM);
@@ -118,6 +119,7 @@ void set_julia_bitmap(unsigned char *ptr)
         }
     }
 }
+*/
 
 const char* importKernel()
 {
@@ -222,7 +224,7 @@ int main(int argc, const char * argv[])
     // Create a bitmap
     CPUBitmap bitmap(GLOBAL_DIM, GLOBAL_DIM);
     unsigned char *ptr = bitmap.get_ptr();
-    set_julia_bitmap(ptr);
+    // set_julia_bitmap(ptr);
     
     // Import and launch kernels
     const char *custom_kernel = importKernel();
