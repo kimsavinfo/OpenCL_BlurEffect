@@ -30,7 +30,7 @@
 
 
 /* ================== JULIA : DEBUT ================== */
-/*
+
 typedef struct cuComplex {
     float r;
     float i;
@@ -85,8 +85,26 @@ int julia(int x, int y) {
     
     return 1;
 }
-*/
+
 /* ================== JULIA : FIN ================== */
+
+void set_julia_bitmap(unsigned char *ptr)
+{
+    for (int tid = 0; tid < GLOBAL_DIM * GLOBAL_DIM; tid++)
+    {
+        int iPixel = tid * 4;
+        int iLine = tid / GLOBAL_DIM;
+        int iColumn = tid - iLine * GLOBAL_DIM;
+        int offset = iPixel;
+       
+        bool isJulia = julia(iColumn, iLine) ? 255 : 0;
+        ptr[offset] = isJulia ? 10 : 0;
+        ptr[offset + 1] = isJulia ? 10 : 0;
+        ptr[offset + 2] = isJulia ? 255 : 0;
+        ptr[offset + 3] = isJulia ? 10 : 0;
+    }
+}
+ 
 /*
 void set_julia_bitmap(unsigned char *ptr)
 {
@@ -94,7 +112,7 @@ void set_julia_bitmap(unsigned char *ptr)
     int nbWorkGroupParLigne = GLOBAL_DIM / WORKGROUP_DIM;
     int nbItemsParWorkGroup = WORKGROUP_DIM * WORKGROUP_DIM;
     
-    for (int iWorkGroup = 0; iWorkGroup < nbWorkGroup - 1; iWorkGroup++)
+    for (int iWorkGroup = 0; iWorkGroup < nbWorkGroup; iWorkGroup++)
     {
         for (int iLocalId = 0; iLocalId < nbItemsParWorkGroup; iLocalId++)
         {
@@ -110,11 +128,9 @@ void set_julia_bitmap(unsigned char *ptr)
             int iPtr = ligne + colonne;
             int offset = iPtr * 4;
             
-            int juliaLine = iPtr / GLOBAL_DIM;
-            int juliaColumn = iPtr - juliaLine * GLOBAL_DIM;
-            ptr[offset] = julia(juliaColumn, juliaLine) ? 255 : 0;
-            ptr[offset + 1] = 0;
-            ptr[offset + 2] = 0;
+            ptr[offset] = 255;
+            ptr[offset + 1] = 255;
+            ptr[offset + 2] = 255;
             ptr[offset + 3] = 0;
         }
     }
@@ -224,7 +240,7 @@ int main(int argc, const char * argv[])
     // Create a bitmap
     CPUBitmap bitmap(GLOBAL_DIM, GLOBAL_DIM);
     unsigned char *ptr = bitmap.get_ptr();
-    // set_julia_bitmap(ptr);
+    set_julia_bitmap(ptr);
     
     // Import and launch kernels
     const char *custom_kernel = importKernel();

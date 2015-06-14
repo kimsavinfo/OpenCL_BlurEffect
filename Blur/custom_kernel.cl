@@ -44,7 +44,6 @@ void custom_kernel(  __global unsigned char *ptr )
     ptr[offset + 1] = cache[1] / nbItemsPerWorkGroup;
     ptr[offset + 2] = cache[2] / nbItemsPerWorkGroup;
     ptr[offset + 3] = cache[3] / nbItemsPerWorkGroup;
-    
 }
 
 
